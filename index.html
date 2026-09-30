@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCIL — Members' Portal</title>
+    <link rel="icon" type="image/png" href="img/tegas-logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- ============ SIGN IN ============ -->
+    <div id="loginScreen" class="auth">
+        <div class="auth-side">
+            <div>
+                <div class="auth-side-brand">
+                    <img src="img/tegas-logo.png" alt="TEGAS — Tabung Ekonomi Gagasan Anak Sarawak" class="auth-side-logo">
+                </div>
+                <div class="auth-rule"></div>
+                <div class="auth-logo">TCIL</div>
+                <p class="auth-sub">Tegas Community<br>Innovative Learning</p>
+            </div>
+            <p class="auth-foot">Members' portal &middot; internal system</p>
+        </div>
+        <div class="auth-main">
+            <form class="auth-form" onsubmit="event.preventDefault(); handleLogin();">
+                <div class="auth-form-brand">
+                    <img src="img/tegas-logo.png" alt="TEGAS — Tabung Ekonomi Gagasan Anak Sarawak" class="auth-form-logo">
+                </div>
+                <h2>Sign in</h2>
+                <p class="auth-note">Enter your member credentials to access the dashboard.</p>
+                <label for="loginEmail">Email</label>
+                <input type="email" id="loginEmail" placeholder="name@tegas.org.my" autocomplete="username">
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" placeholder="Enter password" autocomplete="current-password">
+                <button type="submit" class="btn btn-primary btn-block btn-login" id="btnLogin">Sign in</button>
+                <div class="auth-divider"><span>or continue with</span></div>
+                <button type="button" class="btn btn-google btn-block" id="btnGoogleLogin" onclick="handleGoogleLogin()">
+                    <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span>Sign in with Google</span>
+                </button>
+                <div id="loginError" class="auth-error" style="display:none;"></div>
+                <p class="auth-hint" id="loginHint">Firebase Realtime Database &middot; tcil-93af5</p>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ APP ============ -->
+    <div id="dashboard" class="app" style="display:none;">
+
+        <header class="topbar">
+            <div class="topbar-in">
+                <div class="brand">
+                    <span class="brand-sq"></span>
+                    <span class="brand-name">TCIL</span>
+                    <span class="brand-sub">Tegas Community Innovative Learning</span>
+                </div>
+                <div class="topbar-tools">
+                    <span class="db-pill" id="dbStatusPill" title="Firebase Realtime Database: Connected">
+                        <span class="db-dot"></span> <span id="dbStatusPillText">Live</span>
+                    </span>
+                    <button class="topbar-btn" onclick="showNotifications()">Alerts <span class="alert-chip" id="alertCount">0</span></button>
+                    <div class="topbar-user">
+                        <span class="ava" id="userAvatar">?</span>
+                        <span class="topbar-username"><b id="userName">User</b><i id="userRole">Member</i></span>
+                    </div>
+                    <button class="topbar-btn btn-logout" onclick="handleLogout()">Sign out</button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="mainnav">
+            <div class="mainnav-in">
+                <a href="#" class="nav-item active" data-section="overview">Overview</a>
+                <a href="#" class="nav-item" data-section="events">Events</a>
+                <a href="#" class="nav-item" data-section="members">Members</a>
+                <a href="#" class="nav-item" data-section="budget">Budget</a>
+                <a href="#" class="nav-item" data-section="documents">Documents</a>
+                <a href="#" class="nav-item" data-section="travel">Travel Reports</a>
+                <a href="#" class="nav-item" data-section="settings">Settings</a>
+                <div class="nav-search">
+                    <input type="text" id="globalSearch" placeholder="Search events or members" oninput="handleSearch(this.value)">
+                </div>
+            </div>
+        </nav>
+
+        <main class="main">
+            <div class="page-head">
+                <h1 id="pageTitle">Overview</h1>
+            </div>
+
+            <!-- ===== Overview ===== -->
+            <section id="overview" class="view active">
+                <div class="statstrip">
+                    <div class="stat">
+                        <span class="stat-label">Total events</span>
+                        <span class="stat-value" id="statTotalEvents">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Active members</span>
+                        <span class="stat-value" id="statActiveMembers">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Budget fund</span>
+                        <span class="stat-value" id="statTotalBudget">RM 0</span>
+                        <span class="stat-sub" id="statBudgetSub">—</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Documents filed</span>
+                        <span class="stat-value" id="statDocuments">0</span>
+                    </div>
+                </div>
+
+                <div class="ov-grid">
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>Recent activity</h3>
+                            <span class="card-note">Last 6 entries</span>
+                        </div>
+                        <div class="log" id="recentActivityList"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>Upcoming events</h3>
+                            <button class="linklike" onclick="navigateTo('events')">View all</button>
+                        </div>
+                        <div class="evts" id="upcomingEventsList"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Events ===== -->
+            <section id="events" class="view">
+                <div class="sec-head">
+                    <div>
+                        <h2>Events</h2>
+                        <p>Schedule, attendance and budgets for every TCIL programme.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openEventModal()">Add event</button>
+                </div>
+                <div class="ftabs">
+                    <button class="fbtn active" data-filter="all" onclick="filterEvents('all')">All</button>
+                    <button class="fbtn" data-filter="upcoming" onclick="filterEvents('upcoming')">Upcoming</button>
+                    <button class="fbtn" data-filter="completed" onclick="filterEvents('completed')">Completed</button>
+                </div>
+                <div class="card tablecard">
+                    <table class="tbl" id="eventsTable">
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Date &amp; time</th>
+                                <th>Venue</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                                <th class="num">Pax</th>
+                                <th class="num">Budget</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ===== Members ===== -->
+            <section id="members" class="view">
+                <div class="sec-head">
+                    <div>
+                        <h2>Members</h2>
+                        <p>Directory of registered TCIL members and their roles.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openMemberModal()">Add member</button>
+                </div>
+                <div class="card tablecard">
+                    <table class="tbl" id="membersTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Department</th>
+                                <th>Status</th>
+                                <th>Joined</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ===== Budget ===== -->
+            <section id="budget" class="view">
+                <div class="sec-head">
+                    <div>
+                        <h2>Budget</h2>
+                        <p>Master fund and per-event budgets. Allocating to an event takes money out of the fund.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-head">
+                        <h3>Master fund</h3>
+                        <span class="card-actions">
+                            <button class="linklike" onclick="openAddFundsModal()">Add funds</button>
+                            <button class="linklike" onclick="openEditFundModal()">Edit total</button>
+                        </span>
+                    </div>
+                    <div class="sumstrip">
+                        <div class="sum"><span>Fund total</span><strong id="fundTotal">RM 0</strong></div>
+                        <div class="sum"><span>Committed to events</span><strong id="fundCommitted">RM 0</strong></div>
+                        <div class="sum"><span>Unallocated (available)</span><strong id="fundUnallocated">RM 0</strong></div>
+                        <div class="sum"><span>Spent so far</span><strong id="fundSpent">RM 0</strong></div>
+                        <div class="fundbar" id="fundBar"></div>
+                        <div class="fundbar-legend">
+                            <span><i class="k-spent"></i>Spent</span>
+                            <span><i class="k-committed"></i>Committed, not spent</span>
+                            <span><i class="k-unalloc"></i>Available</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-head">
+                        <h3>Event budgets</h3>
+                        <span class="card-note" id="budgetEntriesNote"></span>
+                    </div>
+                    <div class="ecards" id="eventBudgetList"></div>
+                </div>
+            </section>
+
+            <!-- ===== Documents ===== -->
+            <section id="documents" class="view">
+                <div class="sec-head">
+                    <div>
+                        <h2>Documents</h2>
+                        <p>Minutes, reports, proposals and SOPs filed by members.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openDocumentModal()">Upload document</button>
+                </div>
+                <div class="ftabs">
+                    <button class="fbtn active" data-filter="all" onclick="filterDocuments('all')">All</button>
+                    <button class="fbtn" data-filter="minutes" onclick="filterDocuments('minutes')">Minutes</button>
+                    <button class="fbtn" data-filter="report" onclick="filterDocuments('report')">Reports</button>
+                    <button class="fbtn" data-filter="proposal" onclick="filterDocuments('proposal')">Proposals</button>
+                    <button class="fbtn" data-filter="sop" onclick="filterDocuments('sop')">SOPs</button>
+                </div>
+                <div class="docs" id="documentsGrid"></div>
+            </section>
+
+            <!-- ===== Travel Reports ===== -->
+            <section id="travel" class="view">
+                <div class="sec-head">
+                    <div>
+                        <h2>Travel Reports</h2>
+                        <p>Travel records for travelling members.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openTravelModal()">New record</button>
+                </div>
+                <div class="card tablecard">
+                    <table class="tbl" id="travelTable">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>Event</th>
+                                <th>Destination</th>
+                                <th>Date</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ===== Settings ===== -->
+            <section id="settings" class="view">
+                <div class="sec-head">
+                    <div>
+                        <h2>Settings</h2>
+                        <p>Portal preferences and database configuration.</p>
+                    </div>
+                </div>
+                <div class="set-grid">
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>Database &amp; Authentication</h3>
+                            <span class="tag tag-green" id="dbStatusBadge">Live</span>
+                        </div>
+                        <div class="set-body">
+                            <div>
+                                <label>Firebase project ID</label>
+                                <input type="text" id="settingProjectId" value="tcil-93af5" readonly>
+                            </div>
+                            <div>
+                                <label>Realtime Database URL</label>
+                                <input type="text" id="settingDbUrl" value="https://tcil-93af5-default-rtdb.asia-southeast1.firebasedatabase.app" readonly>
+                            </div>
+                            <div>
+                                <label>Web API Key (for Firebase Auth)</label>
+                                <input type="text" id="settingApiKey" value="AIzaSyB5EPikYI6F7knIfiWMVviZPQ6ZfjGMmC4">
+                            </div>
+                            <p class="set-note" id="dbStatusNote">Realtime Database &amp; Firebase Authentication are connected and syncing live.</p>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button class="btn btn-primary" onclick="saveFirebaseSettings()">Save &amp; Connect Auth</button>
+                                <button class="btn btn-ghost" onclick="syncWithFirebase()">Sync from Cloud</button>
+                                <button class="btn btn-ghost" onclick="pushToFirebase()">Push to Cloud</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>Notifications</h3>
+                        </div>
+                        <div class="set-body">
+                            <label class="check"><input type="checkbox" id="notifEvents" checked> Event reminders</label>
+                            <label class="check"><input type="checkbox" id="notifBudget" checked> Budget alerts</label>
+                            <label class="check"><input type="checkbox" id="notifDocuments" checked> Document uploads</label>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>Appearance</h3>
+                        </div>
+                        <div class="set-body">
+                            <div>
+                                <label>Theme</label>
+                                <select id="themeSelect" onchange="toggleTheme(this.value)">
+                                    <option value="light">Light</option>
+                                    <option value="dark">Dark</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="pagefoot">
+                <span>TCIL internal system — members' portal</span>
+                <span>Demo build v0.2 &middot; data stored locally in this browser</span>
+            </footer>
+        </main>
+    </div>
+
+    <!-- ============ MODALS ============ -->
+
+    <!-- Event -->
+    <div id="eventModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3 id="eventModalTitle">Add event</h3>
+                <button class="modal-x" onclick="closeModal('eventModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="eventId">
+                <div>
+                    <label>Event title</label>
+                    <input type="text" id="eventTitle" placeholder="e.g. TCIL Annual Conference 2025">
+                </div>
+                <div class="frow">
+                    <div>
+                        <label>Date</label>
+                        <input type="date" id="eventDate">
+                    </div>
+                    <div>
+                        <label>Time</label>
+                        <input type="time" id="eventTime">
+                    </div>
+                </div>
+                <div>
+                    <label>Venue</label>
+                    <input type="text" id="eventLocation" placeholder="Enter location">
+                </div>
+                <div class="frow">
+                    <div>
+                        <label>Category</label>
+                        <select id="eventCategory">
+                            <option value="conference">Conference</option>
+                            <option value="workshop">Workshop</option>
+                            <option value="outreach">Outreach</option>
+                            <option value="social">Social</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Status</label>
+                        <select id="eventStatus">
+                            <option value="upcoming">Upcoming</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="frow">
+                    <div>
+                        <label>Attendees (pax)</label>
+                        <input type="number" id="eventAttendees" placeholder="0">
+                    </div>
+                    <div>
+                        <label>Budget (RM)</label>
+                        <input type="number" id="eventBudget" placeholder="0" min="0" oninput="updateEventBudgetHint()">
+                    </div>
+                </div>
+                <div id="eventBudgetHint" class="formnote" style="margin-top:6px; display:none;"></div>
+                <div>
+                    <label>Description</label>
+                    <textarea id="eventDescription" rows="3" placeholder="Short description of the event"></textarea>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button class="btn btn-ghost" onclick="closeModal('eventModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEvent()">Save event</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Member -->
+    <div id="memberModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3 id="memberModalTitle">Add member</h3>
+                <button class="modal-x" onclick="closeModal('memberModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="memberId">
+                <div>
+                    <label>Full name</label>
+                    <input type="text" id="memberName" placeholder="Enter full name">
+                </div>
+                <div>
+                    <label>Email</label>
+                    <input type="email" id="memberEmail" placeholder="name@tcil.edu.my">
+                </div>
+                <div class="frow">
+                    <div>
+                        <label>Role</label>
+                        <select id="memberRole">
+                            <option value="member">Member</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Department</label>
+                        <select id="memberDepartment">
+                            <option value="Senior Management">Senior Management</option>
+                            <option value="Special Project Unit">Special Project Unit</option>
+                            <option value="STEM &amp; Management Unit">STEM &amp; Management Unit</option>
+                            <option value="TVET &amp; Talent Development Unit">TVET &amp; Talent Development Unit</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label>Status</label>
+                    <select id="memberStatus">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button class="btn btn-ghost" onclick="closeModal('memberModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveMember()">Save member</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Travel report -->
+    <div id="travelModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3 id="travelModalTitle">New travel record</h3>
+                <button class="modal-x" onclick="closeModal('travelModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="travelId">
+                <div>
+                    <label>Member name</label>
+                    <input type="text" id="travelMember" placeholder="Enter member name">
+                </div>
+                <div>
+                    <label>Event attended</label>
+                    <input type="text" id="travelEvent" placeholder="Enter event name">
+                </div>
+                <div class="frow">
+                    <div>
+                        <label>Destination</label>
+                        <input type="text" id="travelDestination" placeholder="City / country">
+                    </div>
+                    <div>
+                        <label>Date</label>
+                        <input type="date" id="travelDate">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button class="btn btn-ghost" onclick="closeModal('travelModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTravelReport()">Save record</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event budget edit -->
+    <div id="eventBudgetEditModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3>Edit event budget</h3>
+                <button class="modal-x" onclick="closeModal('eventBudgetEditModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="eventBudgetEditId">
+                <div>
+                    <label>Event</label>
+                    <input type="text" id="eventBudgetEditLabel" disabled>
+                </div>
+                <div class="frow">
+                    <div>
+                        <label>Currently allocated</label>
+                        <input type="text" id="eventBudgetEditCurrent" disabled>
+                    </div>
+                    <div>
+                        <label>Spent so far</label>
+                        <input type="text" id="eventBudgetEditSpent" disabled>
+                    </div>
+                </div>
+                <div>
+                    <label>New allocation (RM) — taken from the fund</label>
+                    <input type="number" id="eventBudgetEditAllocated" placeholder="0">
+                </div>
+                <div class="formnote" id="eventBudgetEditPreview"></div>
+            </div>
+            <div class="modal-foot">
+                <button class="btn btn-ghost" onclick="closeModal('eventBudgetEditModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEventBudgetEdit()">Save allocation</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Record expense for an event -->
+    <div id="eventSpendModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3>Record expense</h3>
+                <button class="modal-x" onclick="closeModal('eventSpendModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="eventSpendId">
+                <div>
+                    <label>Event</label>
+                    <input type="text" id="eventSpendLabel" disabled>
+                </div>
+                <div>
+                    <label>Amount spent (RM)</label>
+                    <input type="number" id="eventSpendAmount" placeholder="0">
+                </div>
+                <div>
+                    <label>Note (optional)</label>
+                    <input type="text" id="eventSpendNote" placeholder="e.g. AV rental, catering, transport">
+                </div>
+                <div class="formnote" id="eventSpendPreview"></div>
+            </div>
+            <div class="modal-foot">
+                <button class="btn btn-ghost" onclick="closeModal('eventSpendModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEventSpend()">Record</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event budget history -->
+    <div id="eventLedgerModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3 id="eventLedgerTitle">Budget history</h3>
+                <button class="modal-x" onclick="closeModal('eventLedgerModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="lgr" id="eventLedgerBody"></div>
+            </div>
+            <div class="modal-foot">
+                <button class="btn btn-ghost" onclick="closeModal('eventLedgerModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add funds to master fund -->
+    <div id="addFundsModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3>Add funds</h3>
+                <button class="modal-x" onclick="closeModal('addFundsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="frow">
+                    <div>
+                        <label>Current fund</label>
+                        <input type="text" id="fundAddCurrent" disabled>
+                    </div>
+                    <div>
+                        <label>Available</label>
+                        <input type="text" id="fundAddAvailable" disabled>
+                    </div>
+                </div>
+                <div>
+                    <label>Amount received (RM)</label>
+                    <input type="number" id="fundAddAmount" placeholder="e.g. 20000">
+                </div>
+                <div>
+                    <label>Source / note (optional)</label>
+                    <input type="text" id="fundAddSource" placeholder="e.g. Tegas grant Q3, sponsorship">
+                </div>
+                <div class="formnote" id="fundAddPreview"></div>
+            </div>
+            <div class="modal-foot">
+                <button class="btn btn-ghost" onclick="closeModal('addFundsModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveAddFunds()">Add to fund</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit master fund total -->
+    <div id="editFundModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3>Edit fund total</h3>
+                <button class="modal-x" onclick="closeModal('editFundModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="frow">
+                    <div>
+                        <label>Current total</label>
+                        <input type="text" id="fundEditCurrent" disabled>
+                    </div>
+                    <div>
+                        <label>Committed to events</label>
+                        <input type="text" id="fundEditCommitted" disabled>
+                    </div>
+                </div>
+                <div>
+                    <label>New fund total (RM)</label>
+                    <input type="number" id="fundEditNew" placeholder="e.g. 100000">
+                </div>
+                <div class="formnote" id="fundEditPreview"></div>
+            </div>
+            <div class="modal-foot">
+                <button class="btn btn-ghost" onclick="closeModal('editFundModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEditFund()">Save total</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts panel -->
+    <div id="alertsBackdrop" class="apanel-backdrop" onclick="closeNotifications()"></div>
+    <div id="notificationsPanel" class="apanel">
+        <div class="apanel-head">
+            <h3>Alerts</h3>
+            <button onclick="closeNotifications()">&times;</button>
+        </div>
+        <div class="apanel-list">
+            <p class="empty" style="padding: 24px 16px; text-align: center; color: var(--mut); font-size: 13.5px;">No active alerts at this time.</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs (v10 compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
