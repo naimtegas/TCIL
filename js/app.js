@@ -873,6 +873,257 @@ function updateEventBudgetHint() {
     }
 }
 
+// ============================================================
+// Friendly Time Picker Component
+// ============================================================
+function parseSingleTimeString(str) {
+    if (!str) return null;
+    str = str.trim();
+    // 12-hour: e.g. "9:00 AM", "09:30pm", "11:15 am", "9:00"
+    const m12 = str.match(/^(\d{1,2}):(\d{2})\s*(am|pm)?$/i);
+    if (m12) {
+        let h = parseInt(m12[1], 10);
+        const m = m12[2];
+        let ampm = m12[3] ? m12[3].toUpperCase() : (h >= 12 ? 'PM' : 'AM');
+        if (h > 12) {
+            h = h % 12;
+            ampm = 'PM';
+        } else if (h === 0) {
+            h = 12;
+        }
+        return {
+            hour: String(h).padStart(2, '0'),
+            minute: m,
+            ampm: ampm
+        };
+    }
+    // simple hour e.g. "9am", "2pm"
+    const mSimple = str.match(/^(\d{1,2})\s*(am|pm)$/i);
+    if (mSimple) {
+        let h = parseInt(mSimple[1], 10);
+        let ampm = mSimple[2].toUpperCase();
+        if (h > 12) {
+            h = h % 12;
+            ampm = 'PM';
+        } else if (h === 0) {
+            h = 12;
+        }
+        return {
+            hour: String(h).padStart(2, '0'),
+            minute: '00',
+            ampm: ampm
+        };
+    }
+    return null;
+}
+
+function setTimePickerValue(rawVal) {
+    const input = document.getElementById('eventTime');
+    if (!input) return;
+    const val = (rawVal || '').trim();
+    input.value = val;
+
+    const popover = document.getElementById('timePickerPopover');
+    if (popover) popover.style.display = 'none';
+
+    const rangeCheckbox = document.getElementById('tpRangeCheckbox');
+    const endSection = document.getElementById('tpEndSection');
+
+    // Highlight matching chip
+    document.querySelectorAll('.time-chip').forEach(function(chip) {
+        if (chip.dataset.time === val) {
+            chip.classList.add('active');
+        } else {
+            chip.classList.remove('active');
+        }
+    });
+
+    if (!val) {
+        if (rangeCheckbox) rangeCheckbox.checked = false;
+        if (endSection) endSection.style.display = 'none';
+        setSelectorValues('Start', '09', '00', 'AM');
+        setSelectorValues('End', '01', '00', 'PM');
+        return;
+    }
+
+    // Check if range: e.g. "09:00 AM – 01:00 PM" or "9:00am - 5:00pm"
+    const parts = val.split(/\s*[-–—]\s*/);
+    if (parts.length >= 2) {
+        const startObj = parseSingleTimeString(parts[0]);
+        const endObj = parseSingleTimeString(parts[1]);
+        if (startObj && endObj) {
+            if (rangeCheckbox) rangeCheckbox.checked = true;
+            if (endSection) endSection.style.display = 'flex';
+            setSelectorValues('Start', startObj.hour, startObj.minute, startObj.ampm);
+            setSelectorValues('End', endObj.hour, endObj.minute, endObj.ampm);
+            return;
+        }
+    }
+
+    // Single time
+    const singleObj = parseSingleTimeString(val);
+    if (singleObj) {
+        if (rangeCheckbox) rangeCheckbox.checked = false;
+        if (endSection) endSection.style.display = 'none';
+        setSelectorValues('Start', singleObj.hour, singleObj.minute, singleObj.ampm);
+        let endH = (parseInt(singleObj.hour, 10) + 1) % 12 || 12;
+        setSelectorValues('End', String(endH).padStart(2, '0'), singleObj.minute, singleObj.ampm);
+    }
+}
+
+function setSelectorValues(target, hour, minute, ampm) {
+    const hEl = document.getElementById('tpHour' + target);
+    const mEl = document.getElementById('tpMinute' + target);
+    if (hEl) {
+        hEl.value = hour;
+        if (hEl.value !== hour) {
+            const opt = document.createElement('option');
+            opt.value = hour;
+            opt.textContent = hour;
+            hEl.appendChild(opt);
+            hEl.value = hour;
+        }
+    }
+    if (mEl) {
+        mEl.value = minute;
+        if (mEl.value !== minute) {
+            const opt = document.createElement('option');
+            opt.value = minute;
+            opt.textContent = minute;
+            mEl.appendChild(opt);
+            mEl.value = minute;
+        }
+    }
+    document.querySelectorAll('.tp-ampm-btn[data-target="' + target + '"]').forEach(function(btn) {
+        if (btn.dataset.period === ampm) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+function applyTimePicker() {
+    const isRange = document.getElementById('tpRangeCheckbox') && document.getElementById('tpRangeCheckbox').checked;
+    const hStart = document.getElementById('tpHourStart') ? document.getElementById('tpHourStart').value : '09';
+    const mStart = document.getElementById('tpMinuteStart') ? document.getElementById('tpMinuteStart').value : '00';
+    const ampmStartBtn = document.querySelector('.tp-ampm-btn.active[data-target="Start"]');
+    const pStart = ampmStartBtn ? ampmStartBtn.dataset.period : 'AM';
+
+    const startFormatted = hStart + ':' + mStart + ' ' + pStart;
+    let finalStr = startFormatted;
+
+    if (isRange) {
+        const hEnd = document.getElementById('tpHourEnd') ? document.getElementById('tpHourEnd').value : '01';
+        const mEnd = document.getElementById('tpMinuteEnd') ? document.getElementById('tpMinuteEnd').value : '00';
+        const ampmEndBtn = document.querySelector('.tp-ampm-btn.active[data-target="End"]');
+        const pEnd = ampmEndBtn ? ampmEndBtn.dataset.period : 'PM';
+        finalStr = startFormatted + ' – ' + hEnd + ':' + mEnd + ' ' + pEnd;
+    }
+
+    const input = document.getElementById('eventTime');
+    if (input) input.value = finalStr;
+
+    // Highlight chips if matches
+    document.querySelectorAll('.time-chip').forEach(function(chip) {
+        if (chip.dataset.time === finalStr) {
+            chip.classList.add('active');
+        } else {
+            chip.classList.remove('active');
+        }
+    });
+
+    const popover = document.getElementById('timePickerPopover');
+    if (popover) popover.style.display = 'none';
+}
+
+function initTimePicker() {
+    const trigger = document.getElementById('timePickerTrigger');
+    const input = document.getElementById('eventTime');
+    const popover = document.getElementById('timePickerPopover');
+    const rangeCheckbox = document.getElementById('tpRangeCheckbox');
+    const endSection = document.getElementById('tpEndSection');
+    const applyBtn = document.getElementById('tpApplyBtn');
+    const clearBtn = document.getElementById('tpClearBtn');
+
+    function togglePopover(e) {
+        if (e) e.stopPropagation();
+        if (!popover) return;
+        const isHidden = popover.style.display === 'none' || !popover.style.display;
+        popover.style.display = isHidden ? 'flex' : 'none';
+    }
+
+    if (trigger) trigger.addEventListener('click', togglePopover);
+    if (input) {
+        input.addEventListener('click', togglePopover);
+        input.addEventListener('change', function() {
+            setTimePickerValue(input.value);
+        });
+    }
+
+    if (rangeCheckbox) {
+        rangeCheckbox.addEventListener('change', function() {
+            if (endSection) endSection.style.display = this.checked ? 'flex' : 'none';
+        });
+    }
+
+    // AM/PM buttons
+    document.querySelectorAll('.tp-ampm-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const target = this.dataset.target;
+            document.querySelectorAll('.tp-ampm-btn[data-target="' + target + '"]').forEach(function(b) {
+                b.classList.remove('active');
+            });
+            this.classList.add('active');
+        });
+    });
+
+    // Quick chips
+    document.querySelectorAll('.time-chip').forEach(function(chip) {
+        chip.addEventListener('click', function(e) {
+            e.stopPropagation();
+            setTimePickerValue(this.dataset.time);
+            if (popover) popover.style.display = 'none';
+        });
+    });
+
+    // Popover grid presets
+    document.querySelectorAll('.tp-grid-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const preset = this.dataset.preset;
+            setTimePickerValue(preset);
+            if (popover) popover.style.display = 'none';
+        });
+    });
+
+    if (applyBtn) {
+        applyBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            applyTimePicker();
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            setTimePickerValue('');
+            if (popover) popover.style.display = 'none';
+        });
+    }
+
+    // Close when clicking outside
+    document.addEventListener('click', function(e) {
+        const ctrl = document.getElementById('timePickerControl');
+        if (popover && popover.style.display !== 'none') {
+            if (ctrl && !ctrl.contains(e.target)) {
+                popover.style.display = 'none';
+            }
+        }
+    });
+}
+
 function openEventModal(id) {
     openModal('eventModal');
     if (id) {
@@ -881,7 +1132,7 @@ function openEventModal(id) {
         document.getElementById('eventId').value = e.id;
         document.getElementById('eventTitle').value = e.title;
         document.getElementById('eventDate').value = e.date;
-        document.getElementById('eventTime').value = e.time || '';
+        setTimePickerValue(e.time || '');
         document.getElementById('eventLocation').value = e.location;
         document.getElementById('eventCategory').value = e.category;
         document.getElementById('eventStatus').value = e.status;
@@ -893,7 +1144,7 @@ function openEventModal(id) {
         document.getElementById('eventId').value = '';
         document.getElementById('eventTitle').value = '';
         document.getElementById('eventDate').value = '';
-        document.getElementById('eventTime').value = '';
+        setTimePickerValue('');
         document.getElementById('eventLocation').value = '';
         document.getElementById('eventCategory').value = 'conference';
         document.getElementById('eventStatus').value = 'upcoming';
@@ -1648,12 +1899,20 @@ function logActivity(action) {
 }
 
 function openModal(id) { document.getElementById(id).classList.add('show'); }
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+    if (id === 'eventModal') {
+        const popover = document.getElementById('timePickerPopover');
+        if (popover) popover.style.display = 'none';
+    }
+}
 
 // Close modal when clicking the dark backdrop
 document.addEventListener('click', function(e) {
     if (e.target.classList && e.target.classList.contains('modal')) {
         e.target.classList.remove('show');
+        const popover = document.getElementById('timePickerPopover');
+        if (popover) popover.style.display = 'none';
     }
 });
 
@@ -1690,6 +1949,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadData();
     initializeApp();
     initFirebase();
+    initTimePicker();
 
     const keyInput = document.getElementById('settingApiKey');
     if (keyInput) {

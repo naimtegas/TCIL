@@ -370,8 +370,115 @@
                         <input type="date" id="eventDate">
                     </div>
                     <div>
-                        <label>Time</label>
-                        <input type="time" id="eventTime">
+                        <label for="eventTime">Time</label>
+                        <div class="time-picker-control" id="timePickerControl">
+                            <div class="time-input-wrap">
+                                <input type="text" id="eventTime" placeholder="e.g. 09:00 AM" autocomplete="off" spellcheck="false">
+                                <button type="button" class="time-btn-trigger" id="timePickerTrigger" title="Open time picker" aria-label="Open time picker">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="time-quick-chips">
+                                <button type="button" class="time-chip" data-time="09:00 AM">9:00 AM</button>
+                                <button type="button" class="time-chip" data-time="10:00 AM">10:00 AM</button>
+                                <button type="button" class="time-chip" data-time="02:00 PM">2:00 PM</button>
+                                <button type="button" class="time-chip" data-time="09:00 AM – 01:00 PM">Half Day</button>
+                                <button type="button" class="time-chip" data-time="09:00 AM – 05:00 PM">Full Day</button>
+                            </div>
+
+                            <!-- Interactive Popover -->
+                            <div class="time-picker-popover" id="timePickerPopover" style="display:none;">
+                                <div class="tp-header">
+                                    <span class="tp-title">Select Event Time</span>
+                                    <label class="tp-range-toggle">
+                                        <input type="checkbox" id="tpRangeCheckbox">
+                                        <span>Add end time</span>
+                                    </label>
+                                </div>
+
+                                <div class="tp-section" id="tpStartSection">
+                                    <div class="tp-label">Start Time</div>
+                                    <div class="tp-selectors">
+                                        <select id="tpHourStart" class="tp-select">
+                                            <option value="08">08</option>
+                                            <option value="09" selected>09</option>
+                                            <option value="10">10</option>
+                                            <option value="11">11</option>
+                                            <option value="12">12</option>
+                                            <option value="01">01</option>
+                                            <option value="02">02</option>
+                                            <option value="03">03</option>
+                                            <option value="04">04</option>
+                                            <option value="05">05</option>
+                                            <option value="06">06</option>
+                                            <option value="07">07</option>
+                                        </select>
+                                        <span class="tp-sep">:</span>
+                                        <select id="tpMinuteStart" class="tp-select">
+                                            <option value="00" selected>00</option>
+                                            <option value="15">15</option>
+                                            <option value="30">30</option>
+                                            <option value="45">45</option>
+                                        </select>
+                                        <div class="tp-ampm-group">
+                                            <button type="button" class="tp-ampm-btn active" data-target="Start" data-period="AM">AM</button>
+                                            <button type="button" class="tp-ampm-btn" data-target="Start" data-period="PM">PM</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="tp-section" id="tpEndSection" style="display:none;">
+                                    <div class="tp-label">End Time</div>
+                                    <div class="tp-selectors">
+                                        <select id="tpHourEnd" class="tp-select">
+                                            <option value="08">08</option>
+                                            <option value="09">09</option>
+                                            <option value="10">10</option>
+                                            <option value="11">11</option>
+                                            <option value="12">12</option>
+                                            <option value="01" selected>01</option>
+                                            <option value="02">02</option>
+                                            <option value="03">03</option>
+                                            <option value="04">04</option>
+                                            <option value="05">05</option>
+                                            <option value="06">06</option>
+                                            <option value="07">07</option>
+                                        </select>
+                                        <span class="tp-sep">:</span>
+                                        <select id="tpMinuteEnd" class="tp-select">
+                                            <option value="00" selected>00</option>
+                                            <option value="15">15</option>
+                                            <option value="30">30</option>
+                                            <option value="45">45</option>
+                                        </select>
+                                        <div class="tp-ampm-group">
+                                            <button type="button" class="tp-ampm-btn" data-target="End" data-period="AM">AM</button>
+                                            <button type="button" class="tp-ampm-btn active" data-target="End" data-period="PM">PM</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="tp-presets-section">
+                                    <div class="tp-label">Popular slots</div>
+                                    <div class="tp-grid-presets">
+                                        <button type="button" class="tp-grid-btn" data-preset="09:00 AM">09:00 AM</button>
+                                        <button type="button" class="tp-grid-btn" data-preset="10:00 AM">10:00 AM</button>
+                                        <button type="button" class="tp-grid-btn" data-preset="11:00 AM">11:00 AM</button>
+                                        <button type="button" class="tp-grid-btn" data-preset="02:00 PM">02:00 PM</button>
+                                        <button type="button" class="tp-grid-btn" data-preset="03:00 PM">03:00 PM</button>
+                                        <button type="button" class="tp-grid-btn" data-preset="08:00 PM">08:00 PM</button>
+                                    </div>
+                                </div>
+
+                                <div class="tp-foot">
+                                    <button type="button" class="btn btn-ghost btn-sm" id="tpClearBtn">Clear</button>
+                                    <button type="button" class="btn btn-primary btn-sm" id="tpApplyBtn">Set Time</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div>

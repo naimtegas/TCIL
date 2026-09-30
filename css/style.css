@@ -1195,6 +1195,219 @@ body.dark .lgr-amt.pos { color: #7ED492; }
     color: var(--mut);
 }
 
+/* ============ Friendly Time Picker Component ============ */
+.time-picker-control {
+    position: relative;
+    width: 100%;
+}
+
+.time-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.time-input-wrap input {
+    padding-right: 38px !important;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.time-btn-trigger {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--mut);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    transition: color 0.15s ease;
+}
+.time-btn-trigger:hover {
+    color: var(--red);
+}
+
+.time-quick-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.time-chip {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 11.5px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-weight: 600;
+    line-height: 1.2;
+    transition: all 0.15s ease;
+}
+
+.time-chip:hover, .time-chip.active {
+    background: var(--red);
+    border-color: var(--red);
+    color: #fff;
+}
+
+.time-picker-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.22);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+}
+
+.tp-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+}
+
+.tp-range-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink);
+    cursor: pointer;
+    user-select: none;
+    font-weight: 500;
+}
+.tp-range-toggle input {
+    cursor: pointer;
+    width: auto !important;
+}
+
+.tp-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tp-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--mut);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tp-selectors {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tp-select {
+    padding: 7px 8px !important;
+    font-size: 13.5px !important;
+    font-weight: 600;
+    border: 1px solid var(--line) !important;
+    background: var(--paper) !important;
+    color: var(--ink) !important;
+    cursor: pointer;
+    flex: 1;
+}
+
+.tp-sep {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.tp-ampm-group {
+    display: flex;
+    border: 1px solid var(--line);
+    overflow: hidden;
+}
+
+.tp-ampm-btn {
+    padding: 7px 11px;
+    background: var(--paper);
+    border: none;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tp-ampm-btn.active {
+    background: var(--red);
+    color: #fff;
+}
+
+.tp-presets-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 4px;
+    border-top: 1px dashed var(--line);
+}
+
+.tp-grid-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+}
+
+.tp-grid-btn {
+    padding: 6px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+}
+
+.tp-grid-btn:hover {
+    background: var(--red);
+    border-color: var(--red);
+    color: #fff;
+}
+
+.tp-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+}
+
+.btn-sm {
+    padding: 6px 14px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+}
+
 /* ============ responsive ============ */
 @media (max-width: 960px) {
     .auth { grid-template-columns: 1fr; }
