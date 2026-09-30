@@ -289,6 +289,10 @@ function updateDatabaseStatusUI(state) {
 }
 
 function saveFirebaseSettings() {
+    if (currentUser().role !== 'admin') {
+        alert('Access denied: Only administrators can configure database & authentication settings.');
+        return;
+    }
     const keyInput = document.getElementById('settingApiKey');
     const apiKey = keyInput ? keyInput.value.trim() : '';
     if (!apiKey) {
@@ -316,6 +320,10 @@ function saveFirebaseSettings() {
 }
 
 function syncWithFirebase() {
+    if (currentUser().role !== 'admin') {
+        alert('Access denied: Only administrators can sync database settings.');
+        return;
+    }
     if (!firebaseDb) {
         alert('Firebase Realtime Database is not connected.');
         return;
@@ -336,6 +344,10 @@ function syncWithFirebase() {
 }
 
 function pushToFirebase() {
+    if (currentUser().role !== 'admin') {
+        alert('Access denied: Only administrators can push database data.');
+        return;
+    }
     if (!firebaseDb) {
         alert('Firebase Realtime Database is not connected.');
         return;
@@ -663,7 +675,20 @@ function setCurrentUser(user) {
             avatarEl.textContent = (user.name || '?').charAt(0).toUpperCase();
         }
     }
-    document.getElementById('userRole').textContent = user.role === 'admin' ? 'Admin' : 'Member';
+    const isAdmin = (user.role === 'admin');
+    document.getElementById('userRole').textContent = isAdmin ? 'Admin' : 'Member';
+
+    // Role-based Settings access: only admin can see the database and auth settings
+    const adminDbCard = document.getElementById('adminDatabaseCard');
+    if (adminDbCard) {
+        adminDbCard.style.display = isAdmin ? 'block' : 'none';
+    }
+    const settingsSub = document.getElementById('settingsSubtitle');
+    if (settingsSub) {
+        settingsSub.textContent = isAdmin
+            ? 'Portal preferences and database configuration.'
+            : 'Portal preferences and appearance.';
+    }
 }
 
 function handleLogout() {
@@ -671,6 +696,8 @@ function handleLogout() {
         firebaseAuth.signOut().catch(function(e) { console.error('Sign out error:', e); });
     }
     SafeStorage.remove('tcilUser');
+    const adminDbCard = document.getElementById('adminDatabaseCard');
+    if (adminDbCard) adminDbCard.style.display = 'none';
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'grid';
     document.getElementById('loginPassword').value = '';

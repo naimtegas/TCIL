@@ -285,13 +285,16 @@
                 <div class="sec-head">
                     <div>
                         <h2>Settings</h2>
-                        <p>Portal preferences and database configuration.</p>
+                        <p id="settingsSubtitle">Portal preferences and database configuration.</p>
                     </div>
                 </div>
                 <div class="set-grid">
-                    <div class="card">
+                    <div class="card" id="adminDatabaseCard" style="display:none;">
                         <div class="card-head">
-                            <h3>Database &amp; Authentication</h3>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <h3>Database &amp; Authentication</h3>
+                                <span class="tag tag-red">Admin</span>
+                            </div>
                             <span class="tag tag-green" id="dbStatusBadge">Live</span>
                         </div>
                         <div class="set-body">
