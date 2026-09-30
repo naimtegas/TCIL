@@ -845,8 +845,120 @@ body.dark .tag-green { color: #7ED492; }
     display: flex;
     flex-direction: column;
     gap: 10px;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ecard:hover {
+    border-color: var(--ink);
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.14);
+    transform: translateY(-2px);
 }
 .ecard.over { border-color: var(--red); }
+.ecard.over:hover { border-color: var(--red); box-shadow: 4px 4px 0 rgba(226,32,45,0.22); }
+
+.ecard-divided-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--paper);
+    border: 1px dashed var(--line);
+    padding: 7px 10px;
+    font-size: 11.5px;
+    color: var(--mut);
+    margin-top: 2px;
+}
+.ecard-divided-summary b { color: var(--ink); }
+.ecard-hint {
+    color: var(--red);
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ============ Divided Budget Breakdown Modal ============ */
+.modal-lg {
+    width: 780px !important;
+    max-width: 95vw !important;
+}
+
+.bd-summary-banner {
+    background: var(--bg);
+    border: 2px solid var(--line);
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.bd-stats-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.bd-stat-box {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+}
+.bd-stat-box span {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--mut);
+    font-weight: 600;
+}
+.bd-stat-box strong {
+    font-size: 17px;
+    color: var(--ink);
+    font-weight: 700;
+}
+.bd-stat-box.neg strong {
+    color: var(--red);
+}
+
+.bd-bar-container {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    padding: 10px 14px;
+}
+.bd-bar-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--mut);
+    margin-bottom: 6px;
+}
+.bd-bar-header span:first-child {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.bd-progress-bar {
+    height: 12px;
+    background: var(--line-2);
+    position: relative;
+    overflow: hidden;
+}
+.bd-progress-fill {
+    height: 100%;
+    background: repeating-linear-gradient(-45deg, var(--yel), var(--yel) 5px, var(--yel-d) 5px, var(--yel-d) 10px);
+    transition: width 0.25s ease;
+}
+.bd-progress-fill.over {
+    background: var(--red);
+}
+.bd-progress-fill.full {
+    background: #1E7A34;
+}
+
+.bd-form-card {
+    border: 2px solid var(--line);
+}
 
 .ecard-top {
     display: flex;

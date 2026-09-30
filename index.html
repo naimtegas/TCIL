@@ -614,6 +614,145 @@
         </div>
     </div>
 
+    <!-- Event Budget Breakdown Modal -->
+    <div id="eventBudgetBreakdownModal" class="modal">
+        <div class="modal-card modal-lg">
+            <div class="modal-head">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <h3 id="bdModalTitle">Divided Budget Breakdown</h3>
+                    <span class="tag tag-grey" id="bdModalCategory">Event</span>
+                </div>
+                <button class="modal-x" onclick="closeModal('eventBudgetBreakdownModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="bdEventId">
+                
+                <!-- Event Header Info & Summary Strip -->
+                <div class="bd-summary-banner">
+                    <div class="bd-info-col">
+                        <h4 id="bdEventName" style="font-size:16px;margin-bottom:3px;">Event Title</h4>
+                        <p id="bdEventMeta" style="font-size:12px;color:var(--mut);">Date · Location · Status</p>
+                    </div>
+                    <div class="bd-stats-row">
+                        <div class="bd-stat-box">
+                            <span>Allocated Budget</span>
+                            <strong id="bdTotalAllocated">RM 0</strong>
+                        </div>
+                        <div class="bd-stat-box">
+                            <span>Divided Items</span>
+                            <strong id="bdTotalDivided">RM 0</strong>
+                        </div>
+                        <div class="bd-stat-box" id="bdRemainingBox">
+                            <span id="bdRemainingLabel">Remaining to Divide</span>
+                            <strong id="bdRemainingAmount">RM 0</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar showing Divided vs Allocated -->
+                <div class="bd-bar-container">
+                    <div class="bd-bar-header">
+                        <span>Budget Allocation Progress</span>
+                        <span id="bdPercentageText" style="font-weight:700;">0% Divided</span>
+                    </div>
+                    <div class="bd-progress-bar">
+                        <div id="bdProgressFill" class="bd-progress-fill" style="width:0%;"></div>
+                    </div>
+                    <p id="bdAllocationNote" class="formnote" style="margin-top:6px;"></p>
+                </div>
+
+                <!-- Add / Edit Divided Budget Item Form -->
+                <div class="card bd-form-card">
+                    <div class="card-head" style="padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--line);">
+                        <h4 id="bdFormHeading" style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Add Divided Budget Item</h4>
+                        <button type="button" class="btn btn-ghost btn-mini" id="bdCancelEditBtn" style="display:none;" onclick="cancelEditBudgetItem()">Cancel Edit</button>
+                    </div>
+                    <div class="set-body" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;">
+                        <input type="hidden" id="bdItemId">
+                        <div class="frow" style="gap:10px;">
+                            <div>
+                                <label for="bdItemName">Item / Purpose <span style="color:var(--red);">*</span></label>
+                                <input type="text" id="bdItemName" placeholder="e.g. Venue Rental, Catering, Speaker Honorarium">
+                            </div>
+                            <div>
+                                <label for="bdItemCategory">Category</label>
+                                <select id="bdItemCategory">
+                                    <option value="Venue">Venue &amp; Facilities</option>
+                                    <option value="Catering">Food &amp; Catering</option>
+                                    <option value="Marketing">Marketing &amp; Promotion</option>
+                                    <option value="Logistics">Logistics &amp; AV Equipment</option>
+                                    <option value="Speaker">Speakers &amp; Trainers</option>
+                                    <option value="Materials">Printing &amp; Materials</option>
+                                    <option value="Gifts">Tokens &amp; Merchandising</option>
+                                    <option value="Misc">Contingency &amp; Misc</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="frow" style="gap:10px;">
+                            <div>
+                                <label for="bdItemAmount">Amount (RM) <span style="color:var(--red);">*</span></label>
+                                <input type="number" id="bdItemAmount" placeholder="0" min="0">
+                            </div>
+                            <div>
+                                <label for="bdItemNote">Notes (Optional)</label>
+                                <input type="text" id="bdItemNote" placeholder="e.g. 100 pax lunch, sound system rental">
+                            </div>
+                        </div>
+
+                        <!-- Quick suggestion chips -->
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:4px;">
+                            <span style="font-size:11.5px;color:var(--mut);font-weight:600;">Quick add:</span>
+                            <button type="button" class="time-chip" onclick="quickFillBudgetItem('Venue / Hall Rental', 'Venue')">+ Venue</button>
+                            <button type="button" class="time-chip" onclick="quickFillBudgetItem('Food &amp; Refreshments', 'Catering')">+ Catering</button>
+                            <button type="button" class="time-chip" onclick="quickFillBudgetItem('Promotion &amp; Marketing', 'Marketing')">+ Marketing</button>
+                            <button type="button" class="time-chip" onclick="quickFillBudgetItem('AV &amp; Sound System', 'Logistics')">+ Logistics</button>
+                            <button type="button" class="time-chip" onclick="quickFillBudgetItem('Speaker Honorarium', 'Speaker')">+ Speaker</button>
+                            <button type="button" class="time-chip" onclick="quickFillBudgetItem('Event Collateral &amp; Badges', 'Materials')">+ Materials</button>
+                        </div>
+
+                        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px;">
+                            <button type="button" class="btn btn-primary" id="bdSubmitBtn" onclick="saveBudgetItem()">Add Divided Item</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table of Divided Items -->
+                <div class="card tablecard" style="margin-top:2px;">
+                    <div class="card-head" style="padding:10px 16px;">
+                        <h4 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;">Divided Items List (<span id="bdItemCount">0</span>)</h4>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="tbl" id="bdTable">
+                            <thead>
+                                <tr>
+                                    <th>Item / Purpose</th>
+                                    <th>Category</th>
+                                    <th class="num">Amount (RM)</th>
+                                    <th>% of Budget</th>
+                                    <th>Notes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bdTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                            <tfoot id="bdTableFoot" style="font-weight:700;background:var(--bg);">
+                                <!-- Populated dynamically -->
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-foot" style="justify-content:space-between;">
+                <button type="button" class="btn btn-ghost" onclick="syncAllocatedWithDividedTotal()" title="Adjust this event's allocated budget to equal the sum of divided items">
+                    Sync Allocated to Divided Total
+                </button>
+                <button class="btn btn-primary" onclick="closeModal('eventBudgetBreakdownModal')">Done</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Event budget edit -->
     <div id="eventBudgetEditModal" class="modal">
         <div class="modal-card">

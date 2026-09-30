@@ -64,6 +64,7 @@ function normalizeFirebaseData(val) {
         users: toArray(val.users),
         events: toArray(val.events).map(function(e) {
             if (!Array.isArray(e.ledger)) e.ledger = toArray(e.ledger);
+            if (!Array.isArray(e.breakdown)) e.breakdown = toArray(e.breakdown);
             return e;
         }),
         fund: val.fund ? {
@@ -1419,7 +1420,13 @@ function renderBudget() {
         const usedPct = e.allocated > 0 ? Math.round(((e.spent || 0) / e.allocated) * 100) : 0;
         const over = remaining < 0;
         const overTag = over ? '<span class="tag tag-red">Over by RM ' + Math.abs(remaining).toLocaleString() + '</span>' : '';
-        return '<div class="ecard' + (over ? ' over' : '') + '">' +
+
+        const breakdown = Array.isArray(e.breakdown) ? e.breakdown : [];
+        const dividedTotal = breakdown.reduce(function(acc, b) { return acc + (parseInt(b.amount, 10) || 0); }, 0);
+        const dividedPct = (e.allocated > 0) ? Math.round((dividedTotal / e.allocated) * 100) : 0;
+        const isDividedOver = dividedTotal > (e.allocated || 0);
+
+        return '<div class="ecard' + (over ? ' over' : '') + '" onclick="openBudgetBreakdownModal(' + e.id + ')" title="Click to view and manage divided budget breakdown">' +
             '<div class="ecard-top">' +
                 '<div>' +
                     '<h4>' + esc(e.title) + '</h4>' +
@@ -1438,13 +1445,308 @@ function renderBudget() {
                 '<span>' + usedPct + '% used</span>' +
                 '<span class="' + (over ? 'neg' : '') + '">' + (over ? 'Over' : 'Left') + ' <b>RM ' + Math.abs(remaining).toLocaleString() + '</b></span>' +
             '</div>' +
+            '<div class="ecard-divided-summary">' +
+                '<span>Divided: <b>RM ' + dividedTotal.toLocaleString() + '</b> (' + breakdown.length + ' item' + (breakdown.length === 1 ? '' : 's') + ' &middot; ' + dividedPct + '%)' +
+                (isDividedOver ? ' <span class="tag tag-red" style="font-size:10px;padding:1px 5px;">Over</span>' : '') + '</span>' +
+                '<span class="ecard-hint">Divided view &rarr;</span>' +
+            '</div>' +
             '<div class="ecard-actions">' +
-                '<button class="btn-edit" onclick="openEventSpendModal(' + e.id + ')">Record expense</button>' +
-                '<button class="btn-edit" onclick="openEventBudgetEditModal(' + e.id + ')">Edit budget</button>' +
-                '<button class="btn-ghost btn-mini" onclick="showEventLedger(' + e.id + ')">History</button>' +
+                '<button class="btn-primary btn-mini" onclick="event.stopPropagation(); openBudgetBreakdownModal(' + e.id + ')">Divided items (' + breakdown.length + ')</button>' +
+                '<button class="btn-edit" onclick="event.stopPropagation(); openEventSpendModal(' + e.id + ')">Record expense</button>' +
+                '<button class="btn-edit" onclick="event.stopPropagation(); openEventBudgetEditModal(' + e.id + ')">Edit budget</button>' +
+                '<button class="btn-ghost btn-mini" onclick="event.stopPropagation(); showEventLedger(' + e.id + ')">History</button>' +
             '</div>' +
         '</div>';
     }).join('') || '<p class="empty">No events yet — add one in the Events section to budget for it.</p>';
+}
+
+// ============================================================
+// Divided Budget Breakdown Modal
+// ============================================================
+const BD_CAT_TAG = {
+    Venue: 'tag-yellow',
+    Catering: 'tag-green',
+    Marketing: 'tag-red',
+    Logistics: 'tag-grey',
+    Speaker: 'tag-yellow',
+    Materials: 'tag-grey',
+    Gifts: 'tag-yellow',
+    Misc: 'tag-grey'
+};
+
+function openBudgetBreakdownModal(eventId) {
+    const e = appData.events.find(function(x) { return x.id === eventId; });
+    if (!e) return;
+
+    if (!Array.isArray(e.breakdown)) {
+        e.breakdown = [];
+    }
+
+    document.getElementById('bdEventId').value = e.id;
+    document.getElementById('bdEventName').textContent = e.title;
+    document.getElementById('bdEventMeta').textContent = formatDate(e.date) + ' · ' + esc(capitalize(e.status)) + ' · ' + esc(e.location);
+    document.getElementById('bdModalCategory').textContent = capitalize(e.category);
+
+    cancelEditBudgetItem();
+    renderBudgetBreakdown(eventId);
+    openModal('eventBudgetBreakdownModal');
+}
+
+function renderBudgetBreakdown(eventId) {
+    const e = appData.events.find(function(x) { return x.id === eventId; });
+    if (!e) return;
+
+    const breakdown = Array.isArray(e.breakdown) ? e.breakdown : [];
+    const totalAllocated = e.allocated || 0;
+    const dividedTotal = breakdown.reduce(function(acc, b) { return acc + (parseInt(b.amount, 10) || 0); }, 0);
+    const remaining = totalAllocated - dividedTotal;
+    const isOver = remaining < 0;
+    const percentage = totalAllocated > 0 ? Math.round((dividedTotal / totalAllocated) * 100) : (dividedTotal > 0 ? 100 : 0);
+
+    // Summary boxes
+    document.getElementById('bdTotalAllocated').textContent = 'RM ' + totalAllocated.toLocaleString();
+    document.getElementById('bdTotalDivided').textContent = 'RM ' + dividedTotal.toLocaleString();
+
+    const remBox = document.getElementById('bdRemainingBox');
+    const remLabel = document.getElementById('bdRemainingLabel');
+    const remAmt = document.getElementById('bdRemainingAmount');
+
+    if (remLabel) remLabel.textContent = isOver ? 'Exceeds Allocated' : 'Remaining to Divide';
+    if (remAmt) remAmt.textContent = 'RM ' + Math.abs(remaining).toLocaleString();
+    if (remBox) {
+        if (isOver) remBox.classList.add('neg');
+        else remBox.classList.remove('neg');
+    }
+
+    // Progress bar
+    const fillEl = document.getElementById('bdProgressFill');
+    const pctText = document.getElementById('bdPercentageText');
+    const noteEl = document.getElementById('bdAllocationNote');
+
+    if (fillEl) {
+        fillEl.style.width = Math.min(100, percentage) + '%';
+        fillEl.className = 'bd-progress-fill' + (isOver ? ' over' : (percentage === 100 ? ' full' : ''));
+    }
+    if (pctText) {
+        pctText.textContent = percentage + '% Divided (' + (isOver ? 'Over allocated' : (percentage === 100 ? 'Fully divided' : 'In progress')) + ')';
+    }
+    if (noteEl) {
+        if (isOver) {
+            noteEl.textContent = 'Warning: Total of divided items (RM ' + dividedTotal.toLocaleString() + ') exceeds the allocated budget by RM ' + Math.abs(remaining).toLocaleString() + '. You can sync the allocated budget using the button below.';
+            noteEl.className = 'formnote warn';
+        } else if (remaining === 0 && totalAllocated > 0) {
+            noteEl.textContent = 'Optimal: 100% of the allocated budget (RM ' + totalAllocated.toLocaleString() + ') has been divided across planned line items.';
+            noteEl.className = 'formnote';
+        } else {
+            noteEl.textContent = 'RM ' + remaining.toLocaleString() + ' of the allocated budget remains unassigned. Add more divided items above.';
+            noteEl.className = 'formnote';
+        }
+    }
+
+    // Item count
+    const countEl = document.getElementById('bdItemCount');
+    if (countEl) countEl.textContent = String(breakdown.length);
+
+    // Table rows
+    const tbody = document.getElementById('bdTableBody');
+    if (tbody) {
+        tbody.innerHTML = breakdown.map(function(item) {
+            const itemAmt = parseInt(item.amount, 10) || 0;
+            const pctOfAlloc = totalAllocated > 0 ? ((itemAmt / totalAllocated) * 100).toFixed(1) : '—';
+            const catTag = BD_CAT_TAG[item.category] || 'tag-grey';
+
+            return '<tr>' +
+                '<td><b>' + esc(item.name) + '</b></td>' +
+                '<td>' + tag(esc(item.category || 'General'), catTag) + '</td>' +
+                '<td class="num"><b>RM ' + itemAmt.toLocaleString() + '</b></td>' +
+                '<td>' + pctOfAlloc + (totalAllocated > 0 ? '%' : '') + '</td>' +
+                '<td style="color:var(--mut);font-size:12.5px;">' + esc(item.note || '—') + '</td>' +
+                '<td>' +
+                    '<button type="button" class="btn-edit" onclick="editBudgetItem(' + eventId + ', ' + item.id + ')">Edit</button>' +
+                    '<button type="button" class="btn-danger" onclick="deleteBudgetItem(' + eventId + ', ' + item.id + ')">Delete</button>' +
+                '</td>' +
+            '</tr>';
+        }).join('') || '<tr><td colspan="6" class="empty" style="padding:24px 10px;text-align:center;">No divided budget items yet. Add items above to break down this event\'s budget.</td></tr>';
+    }
+
+    // Table foot
+    const tfoot = document.getElementById('bdTableFoot');
+    if (tfoot) {
+        tfoot.innerHTML = '<tr>' +
+            '<td colspan="2">Total Divided</td>' +
+            '<td class="num">RM ' + dividedTotal.toLocaleString() + '</td>' +
+            '<td>' + percentage + '%</td>' +
+            '<td colspan="2">' + (isOver ? '<span class="tag tag-red">Over by RM ' + Math.abs(remaining).toLocaleString() + '</span>' : 'RM ' + remaining.toLocaleString() + ' remaining') + '</td>' +
+        '</tr>';
+    }
+}
+
+function quickFillBudgetItem(name, category) {
+    const nameInput = document.getElementById('bdItemName');
+    const catSelect = document.getElementById('bdItemCategory');
+    const amtInput = document.getElementById('bdItemAmount');
+    if (nameInput) nameInput.value = name;
+    if (catSelect) catSelect.value = category;
+    if (amtInput) amtInput.focus();
+}
+
+function saveBudgetItem() {
+    const eventId = parseInt(document.getElementById('bdEventId').value, 10);
+    const e = appData.events.find(function(x) { return x.id === eventId; });
+    if (!e) return;
+
+    if (!Array.isArray(e.breakdown)) e.breakdown = [];
+
+    const itemId = document.getElementById('bdItemId').value;
+    const name = (document.getElementById('bdItemName').value || '').trim();
+    const category = document.getElementById('bdItemCategory').value;
+    const amount = parseInt(document.getElementById('bdItemAmount').value, 10);
+    const note = (document.getElementById('bdItemNote').value || '').trim();
+
+    if (!name) {
+        alert('Please enter an item or purpose name.');
+        document.getElementById('bdItemName').focus();
+        return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+        alert('Please enter a valid amount greater than 0.');
+        document.getElementById('bdItemAmount').focus();
+        return;
+    }
+
+    if (itemId) {
+        // Edit existing item
+        const idx = e.breakdown.findIndex(function(b) { return b.id === parseInt(itemId, 10); });
+        if (idx !== -1) {
+            e.breakdown[idx] = Object.assign({}, e.breakdown[idx], {
+                name: name,
+                category: category,
+                amount: amount,
+                note: note
+            });
+            logActivity('updated divided budget item "' + name + '" for "' + e.title + '"');
+        }
+    } else {
+        // Add new item
+        const newItem = {
+            id: nextId(e.breakdown),
+            name: name,
+            category: category,
+            amount: amount,
+            note: note,
+            createdAt: new Date().toISOString()
+        };
+        e.breakdown.push(newItem);
+        logActivity('added divided budget item "' + name + '" (RM ' + amount.toLocaleString() + ') to "' + e.title + '"');
+    }
+
+    saveData();
+    cancelEditBudgetItem();
+    renderBudgetBreakdown(eventId);
+    renderBudget();
+}
+
+function editBudgetItem(eventId, itemId) {
+    const e = appData.events.find(function(x) { return x.id === eventId; });
+    if (!e || !Array.isArray(e.breakdown)) return;
+
+    const item = e.breakdown.find(function(b) { return b.id === itemId; });
+    if (!item) return;
+
+    document.getElementById('bdItemId').value = item.id;
+    document.getElementById('bdItemName').value = item.name;
+    document.getElementById('bdItemCategory').value = item.category || 'Venue';
+    document.getElementById('bdItemAmount').value = item.amount || '';
+    document.getElementById('bdItemNote').value = item.note || '';
+
+    document.getElementById('bdFormHeading').textContent = 'Edit Divided Budget Item';
+    document.getElementById('bdSubmitBtn').textContent = 'Save Changes';
+    document.getElementById('bdCancelEditBtn').style.display = 'inline-block';
+
+    const nameInput = document.getElementById('bdItemName');
+    if (nameInput) {
+        nameInput.focus();
+        nameInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function cancelEditBudgetItem() {
+    document.getElementById('bdItemId').value = '';
+    document.getElementById('bdItemName').value = '';
+    document.getElementById('bdItemCategory').value = 'Venue';
+    document.getElementById('bdItemAmount').value = '';
+    document.getElementById('bdItemNote').value = '';
+
+    document.getElementById('bdFormHeading').textContent = 'Add Divided Budget Item';
+    document.getElementById('bdSubmitBtn').textContent = 'Add Divided Item';
+    document.getElementById('bdCancelEditBtn').style.display = 'none';
+}
+
+function deleteBudgetItem(eventId, itemId) {
+    const e = appData.events.find(function(x) { return x.id === eventId; });
+    if (!e || !Array.isArray(e.breakdown)) return;
+
+    const item = e.breakdown.find(function(b) { return b.id === itemId; });
+    if (!item) return;
+
+    if (!confirm('Remove "' + item.name + '" (RM ' + (item.amount || 0).toLocaleString() + ') from the divided budget?')) {
+        return;
+    }
+
+    e.breakdown = e.breakdown.filter(function(b) { return b.id !== itemId; });
+    saveData();
+
+    if (document.getElementById('bdItemId').value === String(itemId)) {
+        cancelEditBudgetItem();
+    }
+
+    logActivity('removed divided budget item "' + item.name + '" from "' + e.title + '"');
+    renderBudgetBreakdown(eventId);
+    renderBudget();
+}
+
+function syncAllocatedWithDividedTotal() {
+    const eventId = parseInt(document.getElementById('bdEventId').value, 10);
+    const e = appData.events.find(function(x) { return x.id === eventId; });
+    if (!e) return;
+
+    const breakdown = Array.isArray(e.breakdown) ? e.breakdown : [];
+    const dividedTotal = breakdown.reduce(function(acc, b) { return acc + (parseInt(b.amount, 10) || 0); }, 0);
+
+    if (dividedTotal === (e.allocated || 0)) {
+        alert('The allocated budget is already matching the divided total (RM ' + dividedTotal.toLocaleString() + ').');
+        return;
+    }
+
+    const diff = dividedTotal - (e.allocated || 0);
+    if (diff > 0 && diff > unallocatedTotal()) {
+        alert('The master fund only has RM ' + unallocatedTotal().toLocaleString() + ' available. Increasing this event budget by RM ' + diff.toLocaleString() + ' to RM ' + dividedTotal.toLocaleString() + ' exceeds available master funds.');
+        return;
+    }
+
+    const actionDesc = (diff > 0)
+        ? 'increase allocated budget from RM ' + (e.allocated || 0).toLocaleString() + ' to RM ' + dividedTotal.toLocaleString() + ' (taking RM ' + diff.toLocaleString() + ' from master fund)'
+        : 'reduce allocated budget from RM ' + (e.allocated || 0).toLocaleString() + ' to RM ' + dividedTotal.toLocaleString() + ' (returning RM ' + Math.abs(diff).toLocaleString() + ' to master fund)';
+
+    if (!confirm('Update event "' + e.title + '" to ' + actionDesc + '?')) {
+        return;
+    }
+
+    (e.ledger = e.ledger || []).push({
+        note: (diff > 0 ? 'Allocation synced to divided budget total (increased by RM ' + diff.toLocaleString() + ')' : 'Allocation synced to divided budget total (returned RM ' + Math.abs(diff).toLocaleString() + ' to fund)') + ' by ' + currentUser().name,
+        amount: diff,
+        ts: Date.now()
+    });
+
+    e.allocated = dividedTotal;
+    e.budget = dividedTotal;
+
+    saveData();
+    renderBudgetBreakdown(eventId);
+    renderBudget();
+    renderEventsTable();
+    renderStats();
+    logActivity('synced allocated budget for "' + e.title + '" to divided total RM ' + dividedTotal.toLocaleString());
 }
 
 function openEventBudgetEditModal(id) {
