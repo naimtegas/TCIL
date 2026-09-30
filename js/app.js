@@ -176,6 +176,17 @@ function initFirebase() {
                     if (typeof initializeApp === 'function') {
                         initializeApp();
                     }
+                    if (firebaseAuth && firebaseAuth.currentUser) {
+                        const cur = firebaseAuth.currentUser;
+                        const match = appData.users.find(function(u) {
+                            return (u.email && u.email.toLowerCase() === (cur.email || '').toLowerCase()) || (u.uid && u.uid === cur.uid);
+                        });
+                        if (match) {
+                            setCurrentUser(match);
+                        } else {
+                            syncAuthenticatedMember(cur);
+                        }
+                    }
                 } else {
                     console.log('Firebase Realtime Database empty — seeding initial data');
                     firebaseDb.ref().set(getDefaultData());
@@ -204,31 +215,27 @@ function initFirebase() {
 
 function initAuthListener() {
     if (!firebaseAuth) return;
-    firebaseAuth.getRedirectResult().catch(function(err) {
+    firebaseAuth.getRedirectResult().then(function(result) {
+        if (result && result.user) {
+            syncAuthenticatedMember(result.user);
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'flex';
+        }
+    }).catch(function(err) {
         if (err.code !== 'auth/credential-already-in-use') {
             console.warn('Redirect sign-in result:', err);
         }
     });
     firebaseAuth.onAuthStateChanged(function(user) {
         if (user) {
-            const known = appData ? appData.users.find(function(u) {
-                return u.email.toLowerCase() === user.email.toLowerCase();
-            }) : null;
-            if (known) {
-                const updated = Object.assign({}, known);
-                if (user.photoURL) updated.photoURL = user.photoURL;
-                setCurrentUser(updated);
-            } else {
-                setCurrentUser({
-                    name: user.displayName || user.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }),
-                    email: user.email,
-                    role: 'member',
-                    department: 'General',
-                    photoURL: user.photoURL || null
-                });
-            }
+            syncAuthenticatedMember(user);
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('dashboard').style.display = 'flex';
+        } else {
+            if (!SafeStorage.get('tcilUser')) {
+                document.getElementById('dashboard').style.display = 'none';
+                document.getElementById('loginScreen').style.display = 'grid';
+            }
         }
     });
 }
@@ -342,7 +349,150 @@ function pushToFirebase() {
 }
 
 // ============================================================
-// Auth
+// Authenticated Member Sync (Google / Gmail & Firebase Auth)
+// ============================================================
+function syncAuthenticatedMember(authUser) {
+    if (!authUser || !authUser.email) {
+        return Promise.resolve(null);
+    }
+
+    const email = authUser.email.trim();
+    const emailLower = email.toLowerCase();
+    const uid = authUser.uid;
+    const photoURL = authUser.photoURL || null;
+    const displayName = (authUser.displayName && authUser.displayName.trim()) ||
+        email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+
+    if (!appData) {
+        appData = getDefaultData();
+    }
+    if (!Array.isArray(appData.users)) {
+        appData.users = [];
+    }
+
+    function applySyncToUserList(usersList) {
+        const list = Array.isArray(usersList) ? usersList.slice() : [];
+        const idx = list.findIndex(function(u) {
+            return (u.email && u.email.toLowerCase() === emailLower) || (u.uid && u.uid === uid);
+        });
+
+        let memberRecord;
+        let isNew = false;
+        let hasChanges = false;
+
+        if (idx >= 0) {
+            memberRecord = Object.assign({}, list[idx]);
+            if (photoURL && memberRecord.photoURL !== photoURL) {
+                memberRecord.photoURL = photoURL;
+                hasChanges = true;
+            }
+            if (displayName && (!memberRecord.name || memberRecord.name === memberRecord.email)) {
+                memberRecord.name = displayName;
+                hasChanges = true;
+            }
+            if (uid && memberRecord.uid !== uid) {
+                memberRecord.uid = uid;
+                hasChanges = true;
+            }
+            if (!memberRecord.authProvider) {
+                memberRecord.authProvider = 'google.com';
+                hasChanges = true;
+            }
+            if (memberRecord.status !== 'active') {
+                memberRecord.status = 'active';
+                hasChanges = true;
+            }
+            memberRecord.lastLogin = new Date().toISOString();
+            list[idx] = memberRecord;
+        } else {
+            isNew = true;
+            hasChanges = true;
+            const isFirst = list.length === 0;
+            memberRecord = {
+                id: nextId(list),
+                uid: uid,
+                name: displayName,
+                email: email,
+                role: isFirst ? 'admin' : 'member',
+                department: 'General',
+                status: 'active',
+                joinDate: new Date().toISOString().split('T')[0],
+                photoURL: photoURL,
+                authProvider: 'google.com',
+                lastLogin: new Date().toISOString()
+            };
+            list.push(memberRecord);
+
+            // Record activity
+            if (!Array.isArray(appData.activities)) appData.activities = [];
+            const now = new Date();
+            const pad = function(n) { return String(n).padStart(2, '0'); };
+            appData.activities.unshift({
+                id: nextId(appData.activities),
+                user: memberRecord.name,
+                action: 'registered as a member via Google',
+                time: now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) +
+                      ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()),
+                type: 'upload'
+            });
+            if (appData.activities.length > 50) appData.activities = appData.activities.slice(0, 50);
+        }
+
+        return { list: list, member: memberRecord, isNew: isNew, hasChanges: hasChanges };
+    }
+
+    if (firebaseDb) {
+        return firebaseDb.ref('users').once('value').then(function(snap) {
+            const remoteVal = snap.val();
+            const currentRemoteUsers = toArray(remoteVal);
+            const syncResult = applySyncToUserList(currentRemoteUsers);
+
+            appData.users = syncResult.list;
+            SafeStorage.set('tcilData', JSON.stringify(appData));
+            setCurrentUser(syncResult.member);
+
+            if (syncResult.hasChanges) {
+                const updates = {};
+                updates['users'] = appData.users;
+                if (syncResult.isNew && appData.activities && appData.activities.length) {
+                    updates['activities'] = appData.activities;
+                }
+                return firebaseDb.ref().update(updates).then(function() {
+                    if (typeof renderMembersTable === 'function') renderMembersTable();
+                    if (typeof renderStats === 'function') renderStats();
+                    if (typeof renderRecentActivity === 'function') renderRecentActivity();
+                    return syncResult.member;
+                });
+            } else {
+                if (typeof renderMembersTable === 'function') renderMembersTable();
+                if (typeof renderStats === 'function') renderStats();
+                return syncResult.member;
+            }
+        }).catch(function(err) {
+            console.warn('Realtime Database users sync error, using local state:', err);
+            const syncResult = applySyncToUserList(appData.users);
+            appData.users = syncResult.list;
+            SafeStorage.set('tcilData', JSON.stringify(appData));
+            setCurrentUser(syncResult.member);
+            saveData();
+            if (typeof renderMembersTable === 'function') renderMembersTable();
+            if (typeof renderStats === 'function') renderStats();
+            return syncResult.member;
+        });
+    } else {
+        const syncResult = applySyncToUserList(appData.users);
+        appData.users = syncResult.list;
+        SafeStorage.set('tcilData', JSON.stringify(appData));
+        setCurrentUser(syncResult.member);
+        saveData();
+        if (typeof renderMembersTable === 'function') renderMembersTable();
+        if (typeof renderStats === 'function') renderStats();
+        return Promise.resolve(syncResult.member);
+    }
+}
+
+// ============================================================
+// Auth Handlers
 // ============================================================
 function handleLogin() {
     const email = document.getElementById('loginEmail').value.trim();
@@ -372,20 +522,9 @@ function handleLogin() {
         }
         firebaseAuth.signInWithEmailAndPassword(email, password)
             .then(function(userCredential) {
-                const fbUser = userCredential.user;
-                const known = appData ? appData.users.find(function(u) {
-                    return u.email.toLowerCase() === fbUser.email.toLowerCase();
-                }) : null;
-                if (known) {
-                    setCurrentUser(known);
-                } else {
-                    setCurrentUser({
-                        name: fbUser.displayName || email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }),
-                        email: fbUser.email,
-                        role: 'member',
-                        department: 'General'
-                    });
-                }
+                return syncAuthenticatedMember(userCredential.user);
+            })
+            .then(function() {
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'flex';
                 if (btnLogin) {
@@ -424,12 +563,23 @@ function handleLogin() {
     if (known) {
         setCurrentUser(known);
     } else {
-        setCurrentUser({
+        const newMember = {
+            id: nextId(appData ? appData.users : []),
             name: email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }),
             email: email,
-            role: 'member',
-            department: 'General'
-        });
+            role: (appData && appData.users.length === 0) ? 'admin' : 'member',
+            department: 'General',
+            status: 'active',
+            joinDate: new Date().toISOString().split('T')[0],
+            authProvider: 'password'
+        };
+        if (!appData) appData = getDefaultData();
+        if (!Array.isArray(appData.users)) appData.users = [];
+        appData.users.push(newMember);
+        saveData();
+        setCurrentUser(newMember);
+        if (typeof renderMembersTable === 'function') renderMembersTable();
+        if (typeof renderStats === 'function') renderStats();
     }
 
     document.getElementById('loginScreen').style.display = 'none';
@@ -465,25 +615,9 @@ function handleGoogleLogin() {
 
     firebaseAuth.signInWithPopup(provider)
         .then(function(result) {
-            const user = result.user;
-            const known = appData ? appData.users.find(function(u) {
-                return u.email.toLowerCase() === user.email.toLowerCase();
-            }) : null;
-
-            if (known) {
-                const updated = Object.assign({}, known);
-                if (user.photoURL) updated.photoURL = user.photoURL;
-                setCurrentUser(updated);
-            } else {
-                setCurrentUser({
-                    name: user.displayName || user.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }),
-                    email: user.email,
-                    role: 'member',
-                    department: 'General',
-                    photoURL: user.photoURL || null
-                });
-            }
-
+            return syncAuthenticatedMember(result.user);
+        })
+        .then(function() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('dashboard').style.display = 'flex';
             if (btnGoogle) {
@@ -855,14 +989,30 @@ function editEvent(id) { openEventModal(id); }
 // ============================================================
 function renderMembersTable(list) {
     const tbody = document.querySelector('#membersTable tbody');
-    const users = list || appData.users;
+    const users = list || (appData && appData.users) || [];
     tbody.innerHTML = users.map(function(u) {
+        const photo = u.photoURL;
+        const initial = esc((u.name || u.email || '?').charAt(0).toUpperCase());
+        const avatarHtml = photo
+            ? '<img src="' + esc(photo) + '" alt="' + esc(u.name) + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none;">'
+            : '<span style="width:28px;height:28px;border-radius:50%;background:var(--subtle);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:none;">' + initial + '</span>';
+
+        const isGoogleAuth = (u.authProvider === 'google.com' || !!u.uid);
+
         return '<tr>' +
-            '<td><b>' + esc(u.name) + '</b></td>' +
+            '<td>' +
+                '<div style="display:flex;align-items:center;gap:10px;">' +
+                    avatarHtml +
+                    '<div>' +
+                        '<b>' + esc(u.name) + '</b>' +
+                        (isGoogleAuth ? ' <span title="Authenticated via Google" style="display:inline-block;color:#4285F4;font-size:11px;font-weight:bold;margin-left:4px;">&#10003;</span>' : '') +
+                    '</div>' +
+                '</div>' +
+            '</td>' +
             '<td>' + esc(u.email) + '</td>' +
-            '<td>' + tag(capitalize(u.role), u.role === 'admin' ? 'tag-red' : 'tag-grey') + '</td>' +
-            '<td>' + esc(u.department) + '</td>' +
-            '<td>' + statusTag(u.status) + '</td>' +
+            '<td>' + tag(capitalize(u.role || 'member'), u.role === 'admin' ? 'tag-red' : 'tag-grey') + '</td>' +
+            '<td>' + esc(u.department || 'General') + '</td>' +
+            '<td>' + statusTag(u.status || 'active') + '</td>' +
             '<td>' + formatDate(u.joinDate) + '</td>' +
             '<td>' + rowActions('Member', u.id) + '</td>' +
         '</tr>';
@@ -1453,7 +1603,15 @@ function esc(s) {
 }
 
 function nextId(arr) {
-    return arr.length ? Math.max.apply(null, arr.map(function(x) { return x.id; })) + 1 : 1;
+    if (!arr || !arr.length) return 1;
+    let max = 0;
+    for (let i = 0; i < arr.length; i++) {
+        const idNum = parseInt(arr[i] && arr[i].id, 10);
+        if (!isNaN(idNum) && idNum > max) {
+            max = idNum;
+        }
+    }
+    return max + 1;
 }
 
 function formatDate(dateStr) {
